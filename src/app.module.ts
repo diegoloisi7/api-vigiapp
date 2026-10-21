@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { HealthModule } from './health/health.module';
-import { UsersModule } from './users/users.module';
-import { GroupsModule } from './groups/groups.module';
-import { MembershipsModule } from './memberships/memberships.module';
-import { CategoriesModule } from './categories/categories.module';
-import { IncidentsModule } from './incidents/incidents.module';
+import { HealthModule } from './modules/health/health.module';
+import { UsersModule } from './modules/users/users.module';
+import { GroupsModule } from './modules/groups/groups.module';
+import { MembershipsModule } from './modules/memberships/memberships.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { IncidentsModule } from './modules/incidents/incidents.module';
+import { TestingModule } from './modules/testing/testing.module';
+import { DatabaseEntitiesModule } from './database/database-entities.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { IncidentsModule } from './incidents/incidents.module';
     MembershipsModule,
     CategoriesModule,
     IncidentsModule,
+    TestingModule,
+    DatabaseEntitiesModule,
   ],
 })
 export class AppModule {}

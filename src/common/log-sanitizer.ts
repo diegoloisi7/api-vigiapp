@@ -1,5 +1,5 @@
 const SENSITIVE_KEY =
-  /^(password|passwordhash|password_hash|email|dni|address|firstname|lastname|homelatitude|homelongitude|authorization|token|access_token|refresh_token|secret|endpoint|auth_key|p256dh_key)$/i;
+  /^(password|passwordhash|password_hash|email|dni|address|firstname|lastname|homelatitude|homelongitude|authorization|token|accesstoken|access_token|refreshtoken|refresh_token|jwt|secret|endpoint|auth_key|p256dh_key)$/i;
 
 const MAX_DEPTH = 8;
 const MAX_PROPERTIES = 50;
