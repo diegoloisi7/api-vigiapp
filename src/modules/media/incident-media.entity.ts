@@ -10,28 +10,28 @@ import {
 } from 'typeorm';
 import { Incident } from '../incidents/incident.entity';
 
-@Entity('incident_media')
-@Index('idx_media_incident', ['incidentId'])
+@Entity('archivos_incidentes')
+@Index('idx_archivos_incidente', ['incidentId'])
 export class IncidentMedia {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id!: string;
 
-  @Column({ name: 'incident_id', type: 'bigint', unsigned: true })
+  @Column({ name: 'id_incidente', type: 'bigint', unsigned: true })
   incidentId!: string;
 
-  @Column({ name: 'media_type', type: 'varchar', length: 20 })
+  @Column({ name: 'tipo_archivo', type: 'varchar', length: 20 })
   mediaType!: 'IMAGE' | 'VIDEO';
 
-  @Column({ type: 'varchar', length: 2048 })
+  @Column({ name: 'url_archivo', type: 'varchar', length: 2048 })
   url!: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 3 })
+  @CreateDateColumn({ name: 'fecha_creacion', type: 'datetime', precision: 3 })
   createdAt!: Date;
 
   @ManyToOne(() => Incident, { onUpdate: 'CASCADE', onDelete: 'RESTRICT' })
   @JoinColumn({
-    name: 'incident_id',
-    foreignKeyConstraintName: 'fk_media_incident',
+    name: 'id_incidente',
+    foreignKeyConstraintName: 'fk_archivos_incidente',
   })
   incident?: Relation<Incident>;
 }

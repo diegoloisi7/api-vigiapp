@@ -12,11 +12,15 @@ async function bootstrap() {
   const host = config.get<string>('HOST', '127.0.0.1');
   if (!['127.0.0.1', '::1', 'localhost'].includes(host)) {
     throw new Error(
-      'La API sin autenticación solo puede escuchar en localhost',
+      'La API local de VigiAPP solo puede escuchar en localhost',
     );
   }
 
   app.setGlobalPrefix(config.get<string>('API_PREFIX', 'api'));
+  app.enableCors({
+    origin: config.get<string>('FRONTEND_ORIGIN', 'http://localhost:5173').split(','),
+    credentials: true,
+  });
   app.useGlobalFilters(new ApiExceptionFilter());
   app.useGlobalInterceptors(new HttpLoggingInterceptor());
   app.useGlobalPipes(

@@ -8,18 +8,18 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 
-@Entity('notification_preferences')
+@Entity('preferencias_notificaciones')
 export class NotificationPreference {
-  @PrimaryColumn({ name: 'user_id', type: 'bigint', unsigned: true })
+  @PrimaryColumn({ name: 'id_usuario', type: 'bigint', unsigned: true })
   userId!: string;
 
-  @Column({ name: 'urgent_incidents_enabled', type: 'boolean', default: true })
+  @Column({ name: 'alertas_urgentes_habilitadas', type: 'boolean', default: true })
   urgentIncidentsEnabled!: boolean;
 
   @OneToOne(() => User, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   @JoinColumn({
-    name: 'user_id',
-    foreignKeyConstraintName: 'fk_preferences_user',
+    name: 'id_usuario',
+    foreignKeyConstraintName: 'fk_preferencias_usuario',
   })
   user?: Relation<User>;
 }

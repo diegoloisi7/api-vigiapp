@@ -4,6 +4,10 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { hashPassword, verifyPassword } from './password-hash';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from '../users/user.entity';
 
 const dummyPasswordHash = hashPassword(randomBytes(32).toString('hex'));
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
@@ -13,6 +17,7 @@ export class AuthService {
   constructor(
     private readonly users: UsersService,
     private readonly jwt: JwtService,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
   async login(dto: LoginDto) {
@@ -43,4 +48,16 @@ export class AuthService {
       },
     };
   }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.userRepository.createQueryBuilder('user')
+      .addSelect('user.passwordHash').where('user.id = :userId', { userId }).getOne();
+    if (!user || !(await verifyPassword(user.passwordHash, dto.currentPassword))) {
+      throw new UnauthorizedException('Contraseña actual incorrecta');
+    }
+    user.passwordHash = await hashPassword(dto.newPassword);
+    await this.userRepository.save(user);
+    return { ok: true };
+  }
+
 }

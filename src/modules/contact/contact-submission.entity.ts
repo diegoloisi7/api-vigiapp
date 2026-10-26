@@ -6,21 +6,27 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-@Entity('contact_submissions')
-@Index('idx_contacts_created', ['createdAt'])
+@Entity('mensajes_contacto')
+@Index('idx_contacto_creacion', ['createdAt'])
 export class ContactSubmission {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id!: string;
 
-  @Column({ type: 'varchar', length: 150 })
+  @Column({ name: 'nombre', type: 'varchar', length: 150 })
   name!: string;
 
-  @Column({ type: 'varchar', length: 191 })
+  @Column({ name: 'correo_electronico', type: 'varchar', length: 191 })
   email!: string;
 
-  @Column({ type: 'text' })
+  @Column({ name: 'mensaje', type: 'text' })
   message!: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 3 })
+  @Column({ name: 'asunto', type: 'varchar', length: 150, nullable: true })
+  subject!: string | null;
+
+  @Column({ name: 'fecha_lectura', type: 'datetime', precision: 3, nullable: true })
+  readAt!: Date | null;
+
+  @CreateDateColumn({ name: 'fecha_creacion', type: 'datetime', precision: 3 })
   createdAt!: Date;
 }

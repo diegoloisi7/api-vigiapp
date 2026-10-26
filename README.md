@@ -1,71 +1,33 @@
 # VigiAPP API
 
-API REST del MVP, construida con NestJS, TypeORM y MariaDB 10.4 o superior. TypeORM usa `synchronize: false` y no modifica las tablas automáticamente. El DDL estructural se mantiene fuera de este repositorio.
+Backend NestJS, TypeORM y MariaDB para la web local de VigiAPP. Las rutas usan el prefijo `/api` y nombres compatibles con el cliente React. La API aplica permisos de usuario y de grupo. El contrato React usa IDs numéricos; para la demo local se presupone que no superan `Number.MAX_SAFE_INTEGER`.
 
-## Inicio local
+## Preparación local
 
-1. Usar Node.js 20 o superior e instalar dependencias con `npm install`.
-2. Copiar `.env.example` a `.env` y configurar `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD` y `DB_DATABASE` para la instancia local.
-3. Aplicar el DDL estructural de VigiAPP a una base nueva desde un cliente SQL. El archivo crea y selecciona la base `vigiapp`. La API escribe sus marcas de tiempo en UTC; si otros clientes escriben directamente en las tablas, configurar sus sesiones MariaDB en UTC.
-4. Ejecutar `npm run start:dev` y abrir `http://127.0.0.1:3000/api/health`. Esa ruta ejecuta `SELECT 1` para comprobar la conexión a MariaDB.
+1. Instalar dependencias con `npm install`.
+2. Copiar `.env.example` a `.env` y configurar el usuario y contraseña reales de MariaDB, la base `vigiapp` y un `JWT_SECRET` aleatorio. El backend solo escucha en localhost.
+3. **Base nueva:** importar [`schema/vigiapp_mvp_v3_01_estructura_es.sql`](schema/vigiapp_mvp_v3_01_estructura_es.sql). Este archivo crea y selecciona la base `vigiapp`. Para preservar una `vigiapp` v2 existente, cambiar las sentencias `CREATE DATABASE` y `USE` del DDL a otro nombre, por ejemplo `vigiapp_v3`, y configurar `DB_DATABASE` con ese nombre. **Base v2 con datos:** conservarla como está y hacer una copia de seguridad antes de una eventual migración; no importar el DDL v3 encima.
+4. Ejecutar `npm run migration:run`. La primera migración renombra las tablas y columnas de v2 a v3 según el [diccionario](schema/VIGIAPP_DICCIONARIO_BD_ES.md), o no hace cambios si la base ya es v3.01. La segunda aplica [`migrations/20261025_front_contract.sql`](migrations/20261025_front_contract.sql), que agrega las columnas y dos tablas necesarias para el frontend. TypeORM registra ambas migraciones. `synchronize` permanece en `false`.
+5. Ejecutar `npm run start:dev`. Comprobar `http://localhost:3000/api/health` y revisar `http://localhost:3000/api/docs`.
 
-Como alternativa, `docker compose up -d mariadb` levanta MariaDB local. Después hay que aplicar el DDL manualmente; Docker Compose no importa el esquema. Para Docker, usar los valores de `.env.example` o configurar `DB_PASSWORD` tanto para Compose como para la API.
+Las invitaciones se guardan en `invitaciones_grupo` y el destinatario las consulta al entrar en la aplicación; no se envía correo.
 
-## Swagger local
+## Contrato HTTP
 
-Con la API iniciada, abrir `http://127.0.0.1:3000/api/docs` para ver y ejecutar los endpoints actuales. La especificación OpenAPI está disponible en `http://127.0.0.1:3000/api/docs-json`. Si se cambia `PORT` o `API_PREFIX`, ajustar la URL.
+| Área | Rutas principales |
+|---|---|
+| Identidad | `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `PATCH /auth/password`, `POST /auth/logout` |
+| Grupos | `POST /grupos`, `GET /grupos/mios`, `GET /grupos/:id` |
+| Invitaciones | `POST /grupos/:id/invitaciones`, `DELETE /grupos/:id/invitaciones/:invId`, `GET /invitaciones/mias`, `POST /invitaciones/:id/respuesta` |
+| Incidentes | `GET /incidencias`, `GET /incidencias/mias`, `GET /incidencias/:id`, `POST /incidencias`, `POST /incidencias/urgentes`, `PATCH /incidencias/:id`, `PATCH /incidencias/:id/estado`, `POST` y `DELETE /incidencias/:id/confirmaciones`, `POST /incidencias/:id/ya-resuelto` |
+| Avisos | `GET /avisos`, `GET /avisos/mios`, `POST /avisos`, `PATCH /avisos/:id`, `POST /avisos/:id/cierre` |
+| Otros | `GET /categorias`, `POST /contactos`, `GET /notificaciones`, `PATCH /notificaciones/:id/leida` |
+| Administración | `GET /admin/estadisticas`; CRUD de grupos y usuarios; borrado de incidentes y avisos; alta/edición de categorías; listado y lectura de contactos |
 
-No hace falta iniciar sesión. Primero registrar un usuario con `POST /api/users`; luego las rutas que necesitan un usuario usan por defecto el primero registrado. Para probar con otro, completar el encabezado opcional `X-Test-User-Id` en Swagger con su ID.
+El login devuelve un JWT y coloca una cookie HTTP-only para cargar fotos protegidas desde `<img>`. Las solicitudes JSON pueden enviar `Authorization: Bearer …`. `POST /incidencias` acepta JSON o multipart con el archivo `foto` (JPG, PNG, WebP o GIF, máximo 5 MB). El frontend debe enviar `lat` y `lng`; también son obligatorios para el SOS. Las coordenadas se validan contra el círculo del grupo antes de insertar.
 
-## Endpoints
+Socket.IO recibe el JWT en `auth.token`, verifica al usuario y lo incorpora a las salas de sus grupos. Después del commit de un urgente, el backend emite `incident:urgent` con `groupId`, `incidentId` y un mensaje. El cliente vuelve a consultar incidentes y notificaciones al conectarse o recibir el evento. Las alertas solo llegan mientras la web está abierta.
 
-Todos usan el prefijo `/api`. Los IDs de la base son `BIGINT` y viajan como cadenas en JSON para evitar pérdida de precisión en JavaScript.
+## Estado de la verificación
 
-| Recurso          | Rutas                                                                                                                |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Usuarios         | `POST /users`, `GET /users/me`, `GET /users`, `GET /users/:id`, `PATCH /users/:id`, `DELETE /users/:id`             |
-| Grupos vecinales | `POST /groups`, `GET /groups`, `GET /groups/:id`, `PATCH /groups/:id`, `DELETE /groups/:id`                          |
-| Membresías       | `POST /memberships`, `GET /memberships`, `GET /memberships/:id`, `DELETE /memberships/:id`                             |
-| Categorías       | `POST /categories`, `GET /categories`, `GET /categories/:id`, `PATCH /categories/:id`, `DELETE /categories/:id`      |
-| Incidentes       | `POST /incidents`, `GET /incidents`, `GET /incidents/:id`, `PATCH /incidents/:id`, `DELETE /incidents/:id`           |
-
-`GET /incidents?groupId=1&active=true` devuelve los incidentes activos, no eliminados y no vencidos de un grupo, listos para el mapa. Las coordenadas de un incidente nuevo o reubicado deben quedar dentro del círculo definido por el centro y radio de su grupo; si quedan afuera, la API responde `400`. `DELETE /incidents/:id` hace borrado lógico. El resto de los `DELETE` son físicos y la base puede impedirlos si existen relaciones. En los reportes anónimos, `createdByUserId` solo se muestra al autor, al creador del grupo y al administrador global. El registro de prueba no pide contraseña: se genera un hash aleatorio para completar `password_hash` en la base. Nunca se devuelve ese hash ni el domicilio o las coordenadas del hogar.
-
-Ejemplo de incidente con IDs existentes:
-
-```json
-{
-  "groupId": "1",
-  "categoryId": "1",
-  "reportType": "STANDARD",
-  "title": "Farola apagada",
-  "description": "La farola de la esquina no enciende",
-  "latitude": -34.603722,
-  "longitude": -58.381592,
-  "locationSource": "MANUAL",
-  "isAnonymous": false,
-  "expiresAt": "2030-12-31T23:59:59.000Z"
-}
-```
-
-Enviar ese JSON con `POST /api/incidents`. El usuario de prueba queda registrado como autor; no se acepta `createdByUserId` del cliente. Los IDs referenciados deben existir. Las validaciones HTTP y las claves foráneas del DDL rechazan datos inválidos.
-
-## Identidad de prueba y permisos
-
-El registro se realiza con `POST /api/users` y queda con rol global `USER`. Durante estas pruebas, la API no ofrece `POST /api/auth/login` ni exige JWT. Las rutas que necesitan identidad toman el primer usuario registrado o el ID indicado en `X-Test-User-Id`; el encabezado no es una credencial y cualquiera con acceso local puede elegir cualquier usuario existente. `GET /api/users/me` devuelve el perfil de ese usuario. La API solo inicia si `HOST` es `127.0.0.1`, `localhost` o `::1`.
-
-Los roles globales (`users.app_role`) son `USER` y `ADMIN`. El rol `ADMIN` puede consultar usuarios y todos los incidentes y membresías, administrar categorías, grupos y vecinos. Los usuarios solo pueden consultar y modificar su perfil.
-
-Los roles de grupo (`group_memberships.group_role`) son `GROUP_ADMIN` y `NEIGHBOR`. Al crear un grupo, el creador recibe la membresía `GROUP_ADMIN` en la misma transacción. Solo el creador puede ejercer permisos de `GROUP_ADMIN` en ese grupo: modificarlo, agregar o quitar vecinos y moderar incidentes. Las nuevas membresías reciben `NEIGHBOR`; no se permite cambiar el rol por API ni quitar la membresía del creador mientras exista el grupo. Cada usuario puede pertenecer a un solo grupo. Un `NEIGHBOR` puede ver y crear incidentes de su grupo, editar o eliminar los propios y abandonar su membresía. Incluso un `ADMIN` global debe ser miembro para crear un incidente en un grupo.
-
-El alta directa de membresías queda restringida al `ADMIN` global o al creador del grupo. El flujo de invitaciones (`group_invitations`) todavía no está implementado. Al eliminar un grupo, la API elimina sus membresías en la misma transacción; otras relaciones del DDL pueden impedir la baja y causar rollback.
-
-El primer `ADMIN` se asigna manualmente en la base de desarrollo, por ejemplo: `UPDATE users SET app_role = 'ADMIN' WHERE id = '1';`. No se permite asignar ese rol mediante el endpoint de registro o actualización de perfil.
-
-## Logs HTTP
-
-La consola registra cada solicitud con método, endpoint, parámetros de consulta, código HTTP, duración, body recibido y resultado. Los errores incluyen la respuesta de error. Los logs ocultan contraseñas, correo, DNI, nombres, domicilio, coordenadas del hogar y tokens; los registros largos se truncan. Los errores 4xx salen como `WARN` y los 5xx como `ERROR`.
-
-## Alcance actual
-
-La API escucha en `127.0.0.1` por defecto. La autenticación está deshabilitada solo para pruebas locales; los controles de rol y pertenencia a grupos siguen activos para el usuario de prueba seleccionado. Las tablas `group_invitations`, `incident_confirmations`, `incident_media`, `important_notices`, `notifications`, `notification_preferences` y `contact_submissions` todavía no tienen endpoints. `push_subscriptions` es una tabla heredada del DDL v2 y no se usa en el MVP actual.
+`npm run test:contract` compila y comprueba el orden de persistencia y emisión del SOS, el rechazo fuera del círculo y la correspondencia de las 15 entidades con el DDL v3.01 y su complemento. El renombrado v2 → v3.01 se ensayó además en bases temporales MariaDB 10.4 con datos sintéticos y con una copia de los datos locales; el script [`test/migration-db-smoke.cjs`](test/migration-db-smoke.cjs) no modifica la base fuente. `npm run build` y ESLint también verifican el código. Los estados y plazos de vencimiento implementados a partir del frontend son provisionales hasta que el equipo cierre esas reglas.

@@ -31,8 +31,8 @@ export class MembershipsService {
         'Solo el creador del grupo o un administrador global puede agregar vecinos',
       );
     }
-    if (await this.memberships.existsBy({ userId: dto.userId })) {
-      throw new ConflictException('El usuario ya pertenece a un grupo vecinal');
+    if (await this.memberships.existsBy({ userId: dto.userId, groupId: dto.groupId })) {
+      throw new ConflictException('El usuario ya pertenece a este grupo');
     }
     const membership = await this.memberships.save(
       this.memberships.create({

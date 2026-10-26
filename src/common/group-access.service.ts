@@ -18,6 +18,10 @@ export class GroupAccessService {
     latitude: number,
     longitude: number,
   ): Promise<boolean> {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+      latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return false;
+    }
     const group = await this.groups.findOneBy({ id: groupId });
     if (!group) throw new NotFoundException('Grupo no encontrado');
 
@@ -50,14 +54,7 @@ export class GroupAccessService {
   }
 
   isGroupAdmin(userId: string, groupId: string): Promise<boolean> {
-    return this.memberships
-      .createQueryBuilder('membership')
-      .innerJoin(Group, 'group', 'group.id = membership.group_id')
-      .where('membership.user_id = :userId', { userId })
-      .andWhere('membership.group_id = :groupId', { groupId })
-      .andWhere('membership.group_role = :role', { role: 'GROUP_ADMIN' })
-      .andWhere('group.created_by_user_id = :userId', { userId })
-      .getExists();
+    return this.memberships.existsBy({ userId, groupId, groupRole: 'GROUP_ADMIN' });
   }
 
   async groupIdsForUser(userId: string): Promise<string[]> {
@@ -69,14 +66,10 @@ export class GroupAccessService {
   }
 
   async groupIdsAdministeredBy(userId: string): Promise<string[]> {
-    const memberships = await this.memberships
-      .createQueryBuilder('membership')
-      .innerJoin(Group, 'group', 'group.id = membership.group_id')
-      .select('membership.group_id', 'groupId')
-      .where('membership.user_id = :userId', { userId })
-      .andWhere('membership.group_role = :role', { role: 'GROUP_ADMIN' })
-      .andWhere('group.created_by_user_id = :userId', { userId })
-      .getRawMany<{ groupId: string }>();
+    const memberships = await this.memberships.find({
+      select: { groupId: true },
+      where: { userId, groupRole: 'GROUP_ADMIN' },
+    });
     return memberships.map(({ groupId }) => String(groupId));
   }
 

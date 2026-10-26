@@ -7,8 +7,13 @@ import { GroupsModule } from './modules/groups/groups.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { IncidentsModule } from './modules/incidents/incidents.module';
-import { TestingModule } from './modules/testing/testing.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { DatabaseEntitiesModule } from './database/database-entities.module';
+import { InvitationsModule } from './modules/invitations/invitations.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { NoticesModule } from './modules/notices/notices.module';
+import { ContactModule } from './modules/contact/contact.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -34,8 +39,13 @@ import { DatabaseEntitiesModule } from './database/database-entities.module';
     MembershipsModule,
     CategoriesModule,
     IncidentsModule,
-    TestingModule,
+    AuthModule,
     DatabaseEntitiesModule,
+    InvitationsModule,
+    NotificationsModule,
+    NoticesModule,
+    ContactModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

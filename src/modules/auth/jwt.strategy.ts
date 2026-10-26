@@ -12,7 +12,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly users: UsersService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (request: { headers?: { cookie?: string } }) => {
+          const cookie = request.headers?.cookie?.split(';').map((item) => item.trim())
+            .find((item) => item.startsWith('vigiapp_session='));
+          return cookie ? decodeURIComponent(cookie.slice('vigiapp_session='.length)) : null;
+        },
+      ]),
       ignoreExpiration: false,
       secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
     });

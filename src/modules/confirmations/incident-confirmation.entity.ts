@@ -10,29 +10,29 @@ import {
 import { Incident } from '../incidents/incident.entity';
 import { User } from '../users/user.entity';
 
-@Entity('incident_confirmations')
-@Index('idx_confirmations_user', ['userId'])
+@Entity('confirmaciones_incidentes')
+@Index('idx_confirmaciones_usuario', ['userId'])
 export class IncidentConfirmation {
-  @PrimaryColumn({ name: 'incident_id', type: 'bigint', unsigned: true })
+  @PrimaryColumn({ name: 'id_incidente', type: 'bigint', unsigned: true })
   incidentId!: string;
 
-  @PrimaryColumn({ name: 'user_id', type: 'bigint', unsigned: true })
+  @PrimaryColumn({ name: 'id_usuario', type: 'bigint', unsigned: true })
   userId!: string;
 
-  @CreateDateColumn({ name: 'confirmed_at', type: 'datetime', precision: 3 })
+  @CreateDateColumn({ name: 'fecha_confirmacion', type: 'datetime', precision: 3 })
   confirmedAt!: Date;
 
   @ManyToOne(() => Incident, { onUpdate: 'CASCADE', onDelete: 'RESTRICT' })
   @JoinColumn({
-    name: 'incident_id',
-    foreignKeyConstraintName: 'fk_confirmations_incident',
+    name: 'id_incidente',
+    foreignKeyConstraintName: 'fk_confirmaciones_incidente',
   })
   incident?: Relation<Incident>;
 
   @ManyToOne(() => User, { onUpdate: 'CASCADE', onDelete: 'RESTRICT' })
   @JoinColumn({
-    name: 'user_id',
-    foreignKeyConstraintName: 'fk_confirmations_user',
+    name: 'id_usuario',
+    foreignKeyConstraintName: 'fk_confirmaciones_usuario',
   })
   user?: Relation<User>;
 }

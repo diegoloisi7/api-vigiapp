@@ -12,6 +12,8 @@ import { CreateIncidentDto } from './dto/create-incident.dto';
 import { ListIncidentsDto } from './dto/list-incidents.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
 import { Incident } from './incident.entity';
+import { IncidentStatusEvent } from './incident-status-event.entity';
+import { Category } from '../categories/category.entity';
 
 @Injectable()
 export class IncidentsService {
@@ -47,8 +49,8 @@ export class IncidentsService {
   }
 
   private validate(incident: Incident, requireFuture: boolean) {
-    if (incident.reportType === 'STANDARD' && !incident.categoryId)
-      throw new BadRequestException('Un reporte estándar requiere categoría');
+    if (incident.reportType === 'STANDARD' && (!incident.categoryId || !incident.title?.trim() || !incident.description?.trim()))
+      throw new BadRequestException('Un reporte estándar requiere categoría, título y descripción');
     if (incident.reportType === 'URGENT' && incident.isAnonymous)
       throw new BadRequestException('Un reporte urgente no puede ser anónimo');
     if (
@@ -72,6 +74,10 @@ export class IncidentsService {
   }
 
   async create(dto: CreateIncidentDto, actor: AuthenticatedUser) {
+    if (dto.reportType === 'STANDARD' && (!dto.categoryId ||
+      !(await this.incidents.manager.getRepository(Category).existsBy({ id: dto.categoryId, active: true })))) {
+      throw new BadRequestException('La categoría no existe o está inactiva');
+    }
     if (!(await this.groupAccess.isMember(actor.id, dto.groupId))) {
       throw new ForbiddenException(
         'Debés pertenecer al grupo para reportar un incidente',
@@ -99,32 +105,39 @@ export class IncidentsService {
       updatedAt: now,
     });
     this.validate(incident, true);
-    const saved = await this.incidents.save(incident);
+    const saved = await this.incidents.manager.transaction(async (manager) => {
+      const stored = await manager.getRepository(Incident).save(incident);
+      await manager.getRepository(IncidentStatusEvent).save({
+        incidentId: String(stored.id), actorId: actor.id, status: 'ACTIVE',
+        note: 'Incidente reportado', createdAt: now,
+      });
+      return stored;
+    });
     return this.getOne(String(saved.id), actor);
   }
 
   async findAll(query: ListIncidentsDto, actor: AuthenticatedUser) {
     const qb = this.incidents
       .createQueryBuilder('incident')
-      .where('incident.deleted_at IS NULL');
+      .where('incident.fecha_eliminacion IS NULL');
     let administeredGroupIds: ReadonlySet<string> = new Set();
     if (actor.appRole !== 'ADMIN') {
       const groupIds = await this.groupAccess.groupIdsForUser(actor.id);
       if (query.groupId && !groupIds.includes(query.groupId))
         throw new ForbiddenException('No pertenecés a ese grupo');
       if (groupIds.length === 0) return [];
-      qb.andWhere('incident.group_id IN (:...groupIds)', { groupIds });
+      qb.andWhere('incident.id_grupo IN (:...groupIds)', { groupIds });
       administeredGroupIds = new Set(
         await this.groupAccess.groupIdsAdministeredBy(actor.id),
       );
     }
     if (query.groupId)
-      qb.andWhere('incident.group_id = :groupId', { groupId: query.groupId });
+      qb.andWhere('incident.id_grupo = :groupId', { groupId: query.groupId });
     if (query.active === 'true')
-      qb.andWhere('incident.status = :status', { status: 'ACTIVE' }).andWhere(
-        'incident.expires_at > UTC_TIMESTAMP(3)',
+      qb.andWhere('incident.estado IN (:...statuses)', { statuses: ['ACTIVE', 'FOLLOWING'] }).andWhere(
+        'incident.fecha_vencimiento > UTC_TIMESTAMP(3)',
       );
-    return (await qb.orderBy('incident.created_at', 'DESC').getMany()).map(
+    return (await qb.orderBy('incident.fecha_creacion', 'DESC').getMany()).map(
       (item) => this.response(item, actor, administeredGroupIds),
     );
   }
@@ -151,6 +164,10 @@ export class IncidentsService {
   async update(id: string, dto: UpdateIncidentDto, actor: AuthenticatedUser) {
     const incident = await this.findOne(id, actor);
     await this.assertCanManage(incident, actor);
+    if (dto.categoryId &&
+      !(await this.incidents.manager.getRepository(Category).existsBy({ id: dto.categoryId, active: true }))) {
+      throw new BadRequestException('La categoría no existe o está inactiva');
+    }
     const latitude = dto.latitude ?? incident.latitude;
     const longitude = dto.longitude ?? incident.longitude;
     if (

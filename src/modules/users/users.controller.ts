@@ -8,7 +8,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Public, Roles } from '../auth/auth.decorators';
@@ -18,12 +18,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('Usuarios')
-@ApiHeader({
-  name: 'X-Test-User-Id',
-  required: false,
-  description: 'Usuario de prueba. Si se omite, se usa el primero registrado.',
-})
-@Controller('users')
+@Controller('usuarios')
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 

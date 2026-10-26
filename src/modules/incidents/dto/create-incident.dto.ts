@@ -50,6 +50,11 @@ export class CreateIncidentDto {
   @IsOptional()
   @IsString()
   description?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 255 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  locationLabel?: string | null;
   @ApiProperty({
     minimum: -90,
     maximum: 90,

@@ -8,43 +8,42 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { IdPipe } from '../../common/id.pipe';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { Roles } from '../auth/auth.decorators';
+import { Public, Roles } from '../auth/auth.decorators';
 
 @ApiTags('Categorías')
-@ApiHeader({
-  name: 'X-Test-User-Id',
-  required: false,
-  description: 'Usuario de prueba. Si se omite, se usa el primero registrado.',
-})
-@Controller('categories')
+@Controller('categorias')
 export class CategoriesController {
   constructor(private readonly categories: CategoriesService) {}
+  private view(category: { id: string; name: string; icon: string | null; active: boolean }) {
+    return { id: String(category.id), nombre: category.name, icono: category.icon ?? '📌', activa: category.active };
+  }
   @Post()
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Crear categoría (ADMIN)' })
-  create(@Body() dto: CreateCategoryDto) {
-    return this.categories.create(dto);
+  async create(@Body() dto: CreateCategoryDto) {
+    return this.view(await this.categories.create(dto));
   }
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Listar categorías' })
-  findAll() {
-    return this.categories.findAll();
+  async findAll() {
+    return (await this.categories.findAll()).map((item) => this.view(item));
   }
   @Get(':id')
   @ApiOperation({ summary: 'Consultar categoría por ID' })
-  findOne(@Param('id', IdPipe) id: string) {
-    return this.categories.findOne(id);
+  async findOne(@Param('id', IdPipe) id: string) {
+    return this.view(await this.categories.findOne(id));
   }
   @Patch(':id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Actualizar categoría (ADMIN)' })
-  update(@Param('id', IdPipe) id: string, @Body() dto: UpdateCategoryDto) {
-    return this.categories.update(id, dto);
+  async update(@Param('id', IdPipe) id: string, @Body() dto: UpdateCategoryDto) {
+    return this.view(await this.categories.update(id, dto));
   }
   @Delete(':id')
   @Roles('ADMIN')

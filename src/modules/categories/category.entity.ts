@@ -1,11 +1,12 @@
 import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
-@Entity('incident_categories')
-@Unique('uq_incident_categories_name', ['name'])
+@Entity('categorias_incidentes')
+@Unique('uq_categorias_nombre', ['name'])
 export class Category {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true }) id!: string;
-  @Column({ length: 100 }) name!: string;
-  @Column({ type: 'text', nullable: true }) description!: string | null;
-  @Column({ type: 'varchar', length: 100, nullable: true })
+  @Column({ name: 'nombre', length: 100 }) name!: string;
+  @Column({ name: 'descripcion', type: 'text', nullable: true }) description!: string | null;
+  @Column({ name: 'icono', type: 'varchar', length: 100, nullable: true })
   icon!: string | null;
+  @Column({ name: 'activa', type: 'boolean', default: true }) active!: boolean;
 }

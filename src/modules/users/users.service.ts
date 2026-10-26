@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import {
   BadRequestException,
   ForbiddenException,
@@ -12,6 +11,7 @@ import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthenticatedUser } from '../auth/auth.types';
+import { NotificationPreference } from '../notifications/notification-preference.entity';
 
 @Injectable()
 export class UsersService {
@@ -66,16 +66,23 @@ export class UsersService {
   async create(dto: CreateUserDto) {
     this.validateCoordinates(dto.homeLatitude, dto.homeLongitude);
     const now = new Date();
-    const user = await this.users.save(
-      this.users.create({
-        ...dto,
+    const { password, ...userData } = dto;
+    const user = await this.users.manager.transaction(async (manager) => {
+      const saved = await manager.getRepository(User).save(
+        manager.getRepository(User).create({
+        ...userData,
         email: dto.email.trim().toLowerCase(),
-        passwordHash: await hashPassword(randomBytes(32).toString('base64url')),
+        passwordHash: await hashPassword(password),
         appRole: 'USER',
         createdAt: now,
         updatedAt: now,
-      }),
-    );
+        }),
+      );
+      await manager.getRepository(NotificationPreference).save({
+        userId: String(saved.id), urgentIncidentsEnabled: true,
+      });
+      return saved;
+    });
     return this.publicUser(user);
   }
 

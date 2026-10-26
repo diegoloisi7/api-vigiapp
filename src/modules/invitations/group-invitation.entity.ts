@@ -12,46 +12,46 @@ import {
 import { Group } from '../groups/group.entity';
 import { User } from '../users/user.entity';
 
-@Entity('group_invitations')
-@Unique('uq_invitations_one_pending', [
+@Entity('invitaciones_grupo')
+@Unique('uq_invitaciones_pendientes', [
   'groupId',
   'invitedUserId',
   'pendingMarker',
 ])
-@Index('idx_invitations_invited_status', [
+@Index('idx_invitaciones_destinatario_estado', [
   'invitedUserId',
   'status',
   'invitedAt',
 ])
-@Index('idx_invitations_sender', ['invitedByUserId'])
-@Index('idx_invitations_group_status', ['groupId', 'status'])
+@Index('idx_invitaciones_remitente', ['invitedByUserId'])
+@Index('idx_invitaciones_grupo_estado', ['groupId', 'status'])
 export class GroupInvitation {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id!: string;
 
-  @Column({ name: 'group_id', type: 'bigint', unsigned: true })
+  @Column({ name: 'id_grupo', type: 'bigint', unsigned: true })
   groupId!: string;
 
-  @Column({ name: 'invited_user_id', type: 'bigint', unsigned: true })
+  @Column({ name: 'id_usuario_invitado', type: 'bigint', unsigned: true })
   invitedUserId!: string;
 
-  @Column({ name: 'invited_by_user_id', type: 'bigint', unsigned: true })
+  @Column({ name: 'id_usuario_invitador', type: 'bigint', unsigned: true })
   invitedByUserId!: string;
 
-  @Column({ type: 'varchar', length: 20, default: 'PENDING' })
+  @Column({ name: 'estado', type: 'varchar', length: 20, default: 'PENDING' })
   status!: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'REVOKED';
 
-  @CreateDateColumn({ name: 'invited_at', type: 'datetime', precision: 3 })
+  @CreateDateColumn({ name: 'fecha_invitacion', type: 'datetime', precision: 3 })
   invitedAt!: Date;
 
-  @Column({ name: 'closed_at', type: 'datetime', precision: 3, nullable: true })
+  @Column({ name: 'fecha_cierre', type: 'datetime', precision: 3, nullable: true })
   closedAt!: Date | null;
 
   @Column({
-    name: 'pending_marker',
+    name: 'marcador_pendiente',
     type: 'tinyint',
     nullable: true,
-    asExpression: "CASE WHEN status = 'PENDING' THEN 1 ELSE NULL END",
+    asExpression: "CASE WHEN estado = 'PENDING' THEN 1 ELSE NULL END",
     generatedType: 'STORED',
     insert: false,
     update: false,
@@ -61,22 +61,22 @@ export class GroupInvitation {
 
   @ManyToOne(() => Group, { onUpdate: 'CASCADE', onDelete: 'RESTRICT' })
   @JoinColumn({
-    name: 'group_id',
-    foreignKeyConstraintName: 'fk_invitations_group',
+    name: 'id_grupo',
+    foreignKeyConstraintName: 'fk_invitaciones_grupo',
   })
   group?: Relation<Group>;
 
   @ManyToOne(() => User, { onUpdate: 'CASCADE', onDelete: 'RESTRICT' })
   @JoinColumn({
-    name: 'invited_user_id',
-    foreignKeyConstraintName: 'fk_invitations_invited',
+    name: 'id_usuario_invitado',
+    foreignKeyConstraintName: 'fk_invitaciones_destinatario',
   })
   invitedUser?: Relation<User>;
 
   @ManyToOne(() => User, { onUpdate: 'CASCADE', onDelete: 'RESTRICT' })
   @JoinColumn({
-    name: 'invited_by_user_id',
-    foreignKeyConstraintName: 'fk_invitations_sender',
+    name: 'id_usuario_invitador',
+    foreignKeyConstraintName: 'fk_invitaciones_remitente',
   })
   invitedByUser?: Relation<User>;
 }

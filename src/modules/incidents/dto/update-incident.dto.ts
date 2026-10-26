@@ -28,6 +28,11 @@ export class UpdateIncidentDto {
   @IsOptional()
   @IsString()
   description?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 255 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  locationLabel?: string | null;
   @ApiPropertyOptional({
     type: Number,
     minimum: -90,

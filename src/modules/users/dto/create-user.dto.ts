@@ -12,6 +12,11 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateUserDto {
+  @ApiProperty({ minLength: 8, maxLength: 128 })
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  password!: string;
   @ApiProperty({ minLength: 1, maxLength: 100 })
   @IsString()
   @MinLength(1)

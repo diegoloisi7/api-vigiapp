@@ -1,72 +1,86 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Param,
-  Patch,
-  Post,
-  Query,
-} from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { IdPipe } from '../../common/id.pipe';
-import { AuthenticatedUser } from '../auth/auth.types';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { CreateIncidentDto } from './dto/create-incident.dto';
-import { UpdateIncidentDto } from './dto/update-incident.dto';
-import { ListIncidentsDto } from './dto/list-incidents.dto';
-import { IncidentsService } from './incidents.service';
+import { AuthenticatedUser } from '../auth/auth.types';
+import { IdPipe } from '../../common/id.pipe';
+import { IncidentViewsService } from './incident-views.service';
 
-@ApiTags('Incidentes')
-@ApiHeader({
-  name: 'X-Test-User-Id',
-  required: false,
-  description: 'Usuario de prueba. Si se omite, se usa el primero registrado.',
-})
-@Controller('incidents')
+@Controller('incidencias')
 export class IncidentsController {
-  constructor(private readonly incidents: IncidentsService) {}
-  @Post()
-  @ApiOperation({ summary: 'Reportar incidente' })
-  create(
-    @Body() dto: CreateIncidentDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.incidents.create(dto, user);
+  constructor(private readonly views: IncidentViewsService) {}
+
+  @Get('mias')
+  mine(@CurrentUser() user: AuthenticatedUser) {
+    return this.views.list(undefined, true, user);
   }
+
   @Get()
-  @ApiOperation({ summary: 'Listar incidentes visibles' })
-  findAll(
-    @Query() query: ListIncidentsDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.incidents.findAll(query, user);
+  list(@Query('grupoId') groupId: string | undefined, @CurrentUser() user: AuthenticatedUser) {
+    return this.views.list(groupId, false, user);
   }
+
   @Get(':id')
-  @ApiOperation({ summary: 'Consultar incidente por ID' })
-  findOne(
-    @Param('id', IdPipe) id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.incidents.getOne(id, user);
+  get(@Param('id', IdPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.views.get(id, user);
   }
+
+  @Get(':id/foto')
+  async photo(@Param('id', IdPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    const photo = await this.views.photo(id, user);
+    return new StreamableFile(photo.buffer, { type: photo.type });
+  }
+
+  @Post()
+  @UseInterceptors(FileInterceptor('foto', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  async create(@Body() body: Record<string, unknown>, @UploadedFile() file: { buffer: Buffer; mimetype: string; size: number } | undefined,
+    @CurrentUser() user: AuthenticatedUser) {
+    if (file && (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.mimetype) || file.size > 5 * 1024 * 1024)) {
+      throw new BadRequestException('Tipo o tamaño de foto inválido');
+    }
+    const input = {
+      titulo: body.titulo as string, categoriaId: body.categoriaId as string,
+      descripcion: body.descripcion as string, ubicacion: body.ubicacion as string,
+      lat: body.lat == null ? null : Number(body.lat), lng: body.lng == null ? null : Number(body.lng),
+      grupoId: body.grupoId == null ? undefined : Number(body.grupoId),
+      vigenciaDias: body.vigenciaDias == null ? undefined : Number(body.vigenciaDias),
+    };
+    const result = await this.views.createNormal(input, user);
+    return file ? this.views.storePhoto(String(result.id), file, user) : result;
+  }
+
+  @Post('urgentes')
+  urgent(@Body() body: Parameters<IncidentViewsService['createUrgent']>[0], @CurrentUser() user: AuthenticatedUser) {
+    return this.views.createUrgent(body, user);
+  }
+
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar incidente por ID' })
-  update(
-    @Param('id', IdPipe) id: string,
-    @Body() dto: UpdateIncidentDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.incidents.update(id, dto, user);
+  update(@Param('id', IdPipe) id: string, @Body() body: Parameters<IncidentViewsService['update']>[1], @CurrentUser() user: AuthenticatedUser) {
+    return this.views.update(id, body, user);
   }
+
+  @Patch(':id/estado')
+  status(@Param('id', IdPipe) id: string, @Body() body: { estado: string; nota?: string }, @CurrentUser() user: AuthenticatedUser) {
+    return this.views.changeStatus(id, body.estado, body.nota, user);
+  }
+
+  @Post(':id/confirmaciones')
+  confirm(@Param('id', IdPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.views.confirm(id, false, user);
+  }
+
+  @Delete(':id/confirmaciones')
+  unconfirm(@Param('id', IdPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.views.unconfirm(id, user);
+  }
+
+  @Post(':id/ya-resuelto')
+  resolved(@Param('id', IdPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.views.confirm(id, true, user);
+  }
+
   @Delete(':id')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Descartar incidente por ID' })
-  remove(
-    @Param('id', IdPipe) id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.incidents.remove(id, user);
+  remove(@Param('id', IdPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.views.remove(id, user);
   }
 }

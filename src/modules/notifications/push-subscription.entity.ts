@@ -12,17 +12,18 @@ import {
 import { User } from '../users/user.entity';
 
 // Tabla heredada del DDL v2. El MVP actual no implementa Web Push.
-@Entity('push_subscriptions')
-@Unique('uq_push_subscriptions_endpoint', ['endpoint'])
-@Index('idx_push_subscriptions_user', ['userId'])
+@Entity('suscripciones_push')
+@Unique('uq_suscripciones_punto_acceso', ['endpoint'])
+@Index('idx_suscripciones_usuario', ['userId'])
 export class PushSubscription {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id!: string;
 
-  @Column({ name: 'user_id', type: 'bigint', unsigned: true })
+  @Column({ name: 'id_usuario', type: 'bigint', unsigned: true })
   userId!: string;
 
   @Column({
+    name: 'punto_acceso',
     type: 'varchar',
     length: 1024,
     charset: 'ascii',
@@ -31,7 +32,7 @@ export class PushSubscription {
   endpoint!: string;
 
   @Column({
-    name: 'p256dh_key',
+    name: 'clave_p256dh',
     type: 'varchar',
     length: 255,
     charset: 'ascii',
@@ -40,7 +41,7 @@ export class PushSubscription {
   p256dhKey!: string;
 
   @Column({
-    name: 'auth_key',
+    name: 'clave_autenticacion',
     type: 'varchar',
     length: 255,
     charset: 'ascii',
@@ -48,13 +49,13 @@ export class PushSubscription {
   })
   authKey!: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'datetime', precision: 3 })
+  @CreateDateColumn({ name: 'fecha_creacion', type: 'datetime', precision: 3 })
   createdAt!: Date;
 
   @ManyToOne(() => User, { onUpdate: 'CASCADE', onDelete: 'CASCADE' })
   @JoinColumn({
-    name: 'user_id',
-    foreignKeyConstraintName: 'fk_push_subscriptions_user',
+    name: 'id_usuario',
+    foreignKeyConstraintName: 'fk_suscripciones_usuario',
   })
   user?: Relation<User>;
 }

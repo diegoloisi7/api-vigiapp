@@ -20,7 +20,7 @@ import { MembershipsService } from './memberships.service';
   required: false,
   description: 'Usuario de prueba. Si se omite, se usa el primero registrado.',
 })
-@Controller('memberships')
+@Controller('membresias')
 export class MembershipsController {
   constructor(private readonly memberships: MembershipsService) {}
   @Post()
