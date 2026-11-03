@@ -9,7 +9,9 @@ export class NoticesController {
   constructor(private readonly notices: NoticesService) {}
 
   @Get('mios')
-  mine(@CurrentUser() user: AuthenticatedUser) { return this.notices.list(undefined, true, user); }
+  mine(@Query('grupoId') groupId: string | undefined, @CurrentUser() user: AuthenticatedUser) {
+    return this.notices.list(groupId, true, user);
+  }
 
   @Get()
   list(@Query('grupoId') groupId: string | undefined, @CurrentUser() user: AuthenticatedUser) {

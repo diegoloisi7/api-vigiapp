@@ -10,8 +10,8 @@ export class IncidentsController {
   constructor(private readonly views: IncidentViewsService) {}
 
   @Get('mias')
-  mine(@CurrentUser() user: AuthenticatedUser) {
-    return this.views.list(undefined, true, user);
+  mine(@Query('grupoId') groupId: string | undefined, @CurrentUser() user: AuthenticatedUser) {
+    return this.views.list(groupId, true, user);
   }
 
   @Get()
